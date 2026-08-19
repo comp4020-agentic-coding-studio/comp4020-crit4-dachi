@@ -55,6 +55,17 @@ say what they are for.
   auto-resolved), not a violation — confirmed by hand: worst-case contrast
   against either gradient stop is >5:1 for both the nav link and the hint.
   Don't chase this one; recompute by hand only if the gradient stops change.
+- Multi-touch chording (two fingers, two independent pads sounding at once)
+  can't be driven by `agent-browser`'s CLI input commands — `mouse`/`click`
+  only ever move one pointer. Verified it anyway by dispatching two synthetic
+  `PointerEvent`s with distinct `pointerId`s (`pointerType: 'touch'`) straight
+  at `#stage` via `agent-browser eval`, then reading each pad's `--level` CSS
+  custom property back: two pads went non-zero together, and lifting one
+  `pointerId` left the other still sounding. This exercises the app's own
+  `pointerPad: Map<pointerId, index>` bookkeeping for real (`pointermove`
+  re-hit-testing still runs) — it's synthesising the one input primitive (a
+  second simultaneous touch point) the CLI has no command for, not mocking
+  the app's logic.
 
 ## This file is yours
 
