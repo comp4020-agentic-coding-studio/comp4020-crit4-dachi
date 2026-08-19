@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
@@ -36,5 +36,15 @@ describe("Aurora Keys shell", () => {
 
   it("ships a module script, so synthesis runs in the player's own browser rather than a server", () => {
     expect(doc.querySelector("script[type='module']")).toBeTruthy();
+  });
+
+  // The brief: "sound is made live in the page by the player, not played
+  // back." A pre-recorded sample would satisfy every other check here while
+  // failing this one, so it needs its own assertion.
+  it("has no <audio>/<video> element or pre-recorded audio asset — sound is synthesised, not played back", () => {
+    expect(doc.querySelectorAll("audio, video").length).toBe(0);
+    const shipped = readdirSync(resolve("dist"), { recursive: true }) as string[];
+    const samples = shipped.filter((name) => /\.(mp3|wav|ogg|m4a|flac|aac|webm)$/i.test(name));
+    expect(samples).toEqual([]);
   });
 });
