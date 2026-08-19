@@ -34,6 +34,28 @@ ship); CI runs the same plus links, secrets and the deploy. Read the failure.
 `spec/README.md`, `PROCESS.md` and `reflections/README.md` are in this repo and
 say what they are for.
 
+## The instrument (Aurora Keys)
+
+- Pads are built by `main.ts` at runtime (pointer/touch/keyboard, Web Audio
+  synthesis) — there's nothing in the built `index.html` for a jsdom-based
+  spec test to see beyond `#stage`/`#hint`. `spec/instrument.test.ts` checks
+  the static shell only; playability itself is a real-browser question, at
+  the crit or via `agent-browser`, not something `pnpm check` can assert.
+- Vite's bundled script filename comes from the **HTML entry point**
+  (`index-<hash>.js`), not from `main.ts`'s own name — a spec test can't
+  select the built script by a `main`-shaped filename. Assert
+  `script[type="module"]` instead of matching on `src`.
+- `tsc --noEmit` won't carry a top-level `if (!x) throw` null-narrowing into
+  functions defined and called later in the same module — narrowing doesn't
+  cross function boundaries, even for a `const`. Re-bind to a second,
+  explicitly-typed `const` right after the guard (see `stage`/`hint` in
+  `main.ts`) rather than sprinkling `!` at every use site.
+- Text sitting on the page's radial-gradient background reliably shows as
+  axe's `color-contrast` **incomplete** (gradient backgrounds can't be
+  auto-resolved), not a violation — confirmed by hand: worst-case contrast
+  against either gradient stop is >5:1 for both the nav link and the hint.
+  Don't chase this one; recompute by hand only if the gradient stops change.
+
 ## This file is yours
 
 A starting point, not a rulebook. As you learn what your prototype needs --- a
