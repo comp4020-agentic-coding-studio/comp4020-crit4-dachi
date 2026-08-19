@@ -120,6 +120,21 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   `document.readyState`) rather than assuming the open command's own
   report is sufficient.
 
+- `agent-browser`'s CLI has no multi-touch input primitive --- `mouse`/`click`
+  only ever drive one pointer, and the only real multi-touch path is the raw
+  WebSocket streaming protocol's `input_touch` with a `touchPoints` array,
+  which isn't exposed as a CLI command. For verifying an app's own
+  multi-pointer bookkeeping (e.g. a `Map<pointerId, ...>` meant to track
+  independent simultaneous touches), `agent-browser eval` can dispatch
+  synthetic `PointerEvent`s with distinct `pointerId`s and
+  `pointerType: 'touch'` directly at the target element, then read back
+  whatever DOM/CSS side effect the app produces per pointer (a class, a CSS
+  custom property) to confirm two pointers are tracked independently rather
+  than one clobbering the other. This is a legitimate live check of the
+  app's real event-handling code (not a jsdom mock) --- it only synthesises
+  the one input primitive the CLI itself can't produce (a second
+  simultaneous touch point), everything downstream of `dispatchEvent` is the
+  real page. Confirmed working on crit 4's `comp4020-crit4-dachi`.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
