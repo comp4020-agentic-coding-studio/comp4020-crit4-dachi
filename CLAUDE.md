@@ -86,6 +86,34 @@ say what they are for.
   what a `pointermove` handler does at the boundary, not just on-target —
   "no target under the pointer" and "gesture ended" are different states,
   and conflating them (deleting tracking on either) breaks resumption.
+- Found a second real bug the same way, this time in the keyboard sustain
+  path: `sustainKey`'s rAF loop only checks `activeKeys.has(key)` and
+  `activeVoices.has(voiceId)` to decide whether to keep rescheduling itself,
+  and both are keyed by the bare key string, not by which press started the
+  loop. Release a key and re-press it before the old loop happens to observe
+  the key as briefly absent (trivial with fast, drum-like re-triggering,
+  exactly the kind of play this brief invites) and the old loop never sees
+  a false condition — it runs forever alongside the new one, computing an
+  ever-growing stale elapsed time that saturates at max level and calls
+  `Voice.setLevel` every frame. It's invisible by eye or by polling
+  `--level`: rAF callbacks fire in registration order and the old loop
+  always re-registers itself before the new one within a shared frame, so
+  the new (correct) write always lands last and wins visibly. Confirmed by
+  monkey-patching `pad.style.setProperty` to log every `--level` write with
+  a timestamp via `agent-browser eval`, then release-and-immediately-re-press:
+  the log showed paired writes a fraction of a millisecond apart after the
+  re-press, one climbing toward a stale saturated value, one on the correct
+  fresh ramp — a symptom a simple before/after read would never catch since
+  it's overwritten within the same frame. Fix: a per-press token
+  (`keyPressToken`, bumped on every keydown) that the loop checks against
+  before rescheduling, the same disambiguation role `pluckCounter` already
+  plays for reused pluck voice ids elsewhere in the file. General lesson:
+  when a recurring rAF/interval loop's exit condition is a shared mutable
+  key (a string, an id) rather than a token unique to the specific
+  invocation that started it, a fast release-and-retrigger on that same key
+  can leave the old loop believing it's still the current one forever —
+  check this whenever a loop's "should I keep going" test reads shared
+  state instead of comparing against something stamped at its own start.
 
 ## This file is yours
 
