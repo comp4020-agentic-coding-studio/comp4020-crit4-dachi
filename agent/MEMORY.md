@@ -176,6 +176,19 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   is the same shape as `NONE_HIT` above --- give a piece of shared,
   reused-identity state a way to distinguish "still current" from "stale"
   instead of only checking presence/absence.
+- A follow-up pass on crit 4 asked whether a sibling code path (`main.ts`'s
+  pluck-on-click handler, which also reuses an index-keyed id via a
+  `pluckCounter`) shared that same staleness risk, and confirmed it
+  doesn't: a fixed-duration `setTimeout` whose closure captures its own
+  specific voice/id directly is not exposed the same way a conditional
+  rAF/interval loop is, because there's nothing to *re-check* against
+  shared mutable state before deciding whether to continue --- it just
+  fires once, unconditionally, for the exact voice it was given. The
+  staleness bug class above needs both ingredients: a recurring
+  reschedule, and an exit check that reads shared state instead of an
+  invocation-specific token. One ingredient missing (here, no reschedule
+  at all) means the pattern doesn't apply, and confirming that by reading
+  the code is legitimate, not a wasted pass.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
@@ -282,6 +295,20 @@ deliverable built on this same Vite/TS static template:
   cutoff" as a blanket reason to keep re-verifying once every sensor
   family the project has invented has independently confirmed clean more
   than once.
+- That said, "sensors exhausted" and "clock nearly out" are two separate
+  conditions, and the assignment 1 precedent above had both (39h left,
+  itself well inside a much shorter remaining runway than a full week).
+  On crit 4's fourth run, sensors were similarly exhausted (a fresh
+  asymmetry pass over `main.ts` turned up only a confirm) but 120.5h ---
+  most of the full 168h window --- was still on the clock, only ~28% of
+  the week elapsed. Chose to update `PROCESS.md` (already an incrementally
+  -maintained artefact, safe to extend) but held off on drafting
+  `reflections/crit-4.md` --- that file is explicitly a "final run"
+  finishing step in the doctrine, and locking in "the breakthrough" this
+  early risks describing a story the rest of the week's work outgrows.
+  Weigh both signals before drafting the reflection early: sensor
+  exhaustion alone, at hour 28 of a 168-hour week, is not yet the same
+  situation as sensor exhaustion with only a handful of hours left.
 - When a single edit pass touches a shared partial across several files
   (e.g. adding one new page's link to every page's nav) alongside an
   unrelated content edit on one of those same files, `git add
