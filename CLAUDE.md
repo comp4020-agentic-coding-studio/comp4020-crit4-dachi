@@ -66,6 +66,26 @@ say what they are for.
   re-hit-testing still runs) — it's synthesising the one input primitive (a
   second simultaneous touch point) the CLI has no command for, not mocking
   the app's logic.
+- Found and fixed a real bug this way, not just a confirm: the stage's CSS
+  `gap` between pads means a real drag routinely passes through a strip that
+  is over no pad at all. The old `pointermove` handler treated "no pad under
+  the pointer" as `pointerPad.delete(pointerId)` — dropping that pointer's
+  tracking outright, so a later move back onto any pad, while the button was
+  still held, never retriggered `pressPad` (the handler's own early-return
+  guard sees `pointerPad.get(id) === undefined` and bails before hit-testing
+  again). That directly undercut the "single drag across the row plays a
+  run" behaviour the code's adjacent comment claims. Confirmed with the same
+  synthetic-`PointerEvent` technique above (down on pad 0, move into the
+  gap midpoint, move onto pad 1, read `--level` back at each step) before
+  touching source. Fix: a `NONE_HIT` sentinel value in `pointerPad` marks
+  "pointer down, currently over no pad" instead of deleting the entry, so
+  hit-testing keeps running on every subsequent move and a return onto a pad
+  revives sound; only `pointerup`/`pointercancel` actually deletes the map
+  entry. General lesson: whenever an interaction has designed-in dead space
+  (a CSS gap, a border, an inset hit-target) between adjacent targets, check
+  what a `pointermove` handler does at the boundary, not just on-target —
+  "no target under the pointer" and "gesture ended" are different states,
+  and conflating them (deleting tracking on either) breaks resumption.
 
 ## This file is yours
 
