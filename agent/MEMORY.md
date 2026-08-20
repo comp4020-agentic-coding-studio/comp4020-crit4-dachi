@@ -153,6 +153,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   border, an inset hit-area) is a distinct test case from "on-target" and
   "gesture ended," worth checking explicitly any time a pointer handler
   hit-tests by element-under-pointer rather than by capture.
+- A third technique in the same family, needed when a bug's symptom is
+  masked by write ordering rather than absent: on crit 4, a recurring rAF
+  loop (a keyboard key's sustain ramp) had a stale, never-terminating
+  duplicate spawned by fast release-and-re-press, but polling the DOM value
+  it wrote showed nothing wrong, because the stale loop and the fresh one
+  both wrote every frame and the fresh one's write always landed last
+  (rAF callbacks fire in registration order; the older loop always
+  re-registers itself before the newer one within a shared frame).
+  Monkey-patching the target element's own `style.setProperty` via
+  `agent-browser eval` (wrap it, log every call with a timestamp, call the
+  original) surfaced the truth: paired writes a fraction of a millisecond
+  apart right after the re-press, one stale-and-climbing, one correct.
+  General lesson: when a suspected duplicate-writer bug could be
+  self-masking because of a deterministic "last write wins" ordering,
+  polling the final value is the wrong sensor --- intercept the write call
+  itself (not just its eventual DOM/CSS result) to see every write, not
+  just the one that happened to be visible after the fact. Root cause was a
+  loop whose "keep going" check read shared mutable state (a key string)
+  rather than a token stamped at the specific invocation's own start; the
+  fix (a per-press generation counter the loop checks before rescheduling)
+  is the same shape as `NONE_HIT` above --- give a piece of shared,
+  reused-identity state a way to distinguish "still current" from "stale"
+  instead of only checking presence/absence.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off

@@ -1,74 +1,70 @@
-# Hand-off --- crit 4 (an instrument), third run, ~137.5h to cutoff
+# Hand-off --- crit 4 (an instrument), fourth run, ~131.5h to cutoff
 
 ## State
 
 `comp4020-crit4-dachi`: Aurora Keys was `pnpm check` green and pushed at the
-start of this run, exactly matching the prior hand-off (nothing had touched
-the repo in between). Brief re-fetched fresh from `crits/04-instrument.json`
---- unchanged again.
+start of this run, exactly matching the prior hand-off. Brief re-fetched fresh
+from `crits/04-instrument.json` --- unchanged again.
 
-This run closed both open threads the last hand-off named:
+This run did the keyboard-path asymmetry pass the last hand-off named as the
+one genuinely open thread, and found a real bug, not a confirm:
 
-1. **Live-verified `firstInteraction()`/`releaseAll()` under tab-blur.**
-   Dispatched a synthetic `pointerdown` on a pad, then a real `blur` event on
-   `window`, and read the pad's `--level` CSS custom property back: it went
-   from `0.5` to `0`. Confirmed correct, no bug.
-2. **Did the logic-symmetry pass on `main.ts`'s pointer/Voice/sustainKey code
-   the last two hand-offs had flagged as not yet done --- and found a real
-   bug, not a confirm.** The stage's CSS has a `gap` between every pad
-   (`clamp(0.4rem, 2vw, 1rem)`, `0.35rem` on mobile), so a real drag across
-   the row routinely passes over a strip that is over no pad. The old
-   `pointermove` handler treated "no pad under the pointer" as
-   `pointerPad.delete(pointerId)` --- dropping that pointer's tracking
-   outright. Since the handler's own guard is `if (pointerPad.get(id) ===
-   undefined) return`, a later move back onto any pad, while the mouse
-   button was still physically held, never retriggered `pressPad`: the drag
-   silently died at the first gap it crossed. This directly undercut the
-   "single drag across the row plays a run" behaviour the code's own
-   adjacent comment claims. Confirmed with the same synthetic-`PointerEvent`
-   technique used for multi-touch chording last run (down on pad 0, move to
-   the gap midpoint, move onto pad 1, read `--level` at each step) *before*
-   touching source, then again after the fix. Fix: a `NONE_HIT` sentinel
-   value in `pointerPad` marks "pointer down, currently over no pad" instead
-   of deleting the map entry, so hit-testing keeps running on every
-   subsequent move; only `pointerup`/`pointercancel` actually deletes now.
-   Pushed as two commits (`25d70fd` fix, `7a3ecbc` CLAUDE.md writeup).
-2. `pnpm check` stayed 23/23 green throughout (jsdom specs can't see this
-   runtime pointer logic at all --- confirmed via `spec/instrument.test.ts`'s
-   own comment, so this bug was only reachable by reading source and
-   live-verifying, not by a failing test).
-3. Pushed both commits to `origin/main`.
+1. **`sustainKey`'s rAF loop can outlive the press that started it.** Its
+   only exit check is `activeKeys.has(key)` / `activeVoices.has(voiceId)`,
+   both keyed by the bare key string. Release a key and re-press it before
+   the old loop happens to observe the key as briefly absent (trivially easy
+   with fast, drum-like re-triggering, which this instrument explicitly
+   invites) and the old loop never sees a false condition --- it runs
+   forever alongside the new one, computing an ever-growing stale elapsed
+   time that saturates and calls `Voice.setLevel` every frame.
+2. **This was invisible to a plain before/after `--level` read** --- rAF
+   callbacks fire in registration order, and the old loop always
+   re-registers itself before the new one within a shared frame, so the new
+   (correct) write always lands last and wins visibly. Had to monkey-patch
+   `pad.style.setProperty` via `agent-browser eval` to log every `--level`
+   write with a timestamp; after a release-and-immediate-re-press the log
+   showed paired writes a fraction of a millisecond apart (one climbing
+   toward a stale saturated value, one on the correct fresh ramp) ---
+   confirming two concurrent loops where a periodic sample of just the
+   final DOM value showed nothing wrong.
+3. Fix: a per-press token (`keyPressToken`, bumped every keydown) that the
+   loop checks against before rescheduling --- the same disambiguation role
+   `pluckCounter` already plays for reused pluck voice ids elsewhere in the
+   file. Re-ran the identical monkey-patched reproduction after the fix:
+   exactly one write per frame after the re-press, no stale pair. Pushed as
+   two commits (`bcd5cf6` fix, `19c6843` CLAUDE.md writeup).
+4. `pnpm check` stayed 23/23 green throughout (same as the pointer bug last
+   run: this is runtime pointer/keyboard logic no jsdom spec test can see).
 
-`pnpm check` green (23/23 + typecheck + build). Working tree clean.
+`pnpm check` green (23/23 + typecheck + build). Working tree clean, pushed.
 `pnpm check:evidence` still fails on exactly one thing: no
-`reflections/crit-4.md` yet --- still correct this early (137.5h out, i.e.
-comfortably >24h, so no reason to write it yet).
+`reflections/crit-4.md` yet --- still correct this early (131.5h out,
+comfortably >24h).
 
 ## Next action
 
-Both threads named in the last two hand-offs are now closed (multi-touch
-confirmed clean two runs ago, blur confirmed clean this run, and the
-logic-symmetry pass this run found and fixed a real bug rather than just
-confirming). A future run should:
+Both threads the last two hand-offs opened (pointer-drag-through-gap,
+keyboard sustain-loop staleness) are now closed, each by the same method:
+read the code fresh for an asymmetry, then live-verify with a targeted
+synthetic-event technique before touching source, then again after the fix.
 
 1. Always re-check the brief first, even though it keeps not changing.
-2. Don't re-run any of the now-exhausted sensors identically: a11y, keyboard,
-   resize, reduced-motion, both marking viewports, multi-touch chording,
-   tab-blur silencing, and now the pointer-drag-through-gap fix are all
-   live-verified at least once. Only re-run one if a future *code* change
-   actually touches that area.
-3. Remaining genuinely-open thread: the `sustainKey` rAF ramp
-   (`clamp01(0.4 + elapsed * 0.5)`) and the pluck-vs-hold keyboard path
-   haven't had the same "read fresh, look for an asymmetry" treatment the
-   pointer code just got --- e.g. does releasing a key mid-ramp and
-   re-pressing the same key before its `Voice.release()` decay finishes
-   double up any state, and does `activeKeys`/`activeVoices` ever disagree
-   the way `pointerPad` used to? Worth a similar pass before assuming
-   keyboard input is clean just because pointer input's bug got fixed.
-4. Once 1 more run passes with nothing new to add (or this keyboard-path
-   pass also turns up only confirms), that's the signal to draft
-   `reflections/crit-4.md` (150--300 words, the two standing prompts) ---
-   not before.
-5. `gh auth` and `/ship` remain unavailable in this environment (not
+2. Sensors now exhausted at least once: a11y, keyboard, resize,
+   reduced-motion, both marking viewports, multi-touch chording, tab-blur
+   silencing, pointer-drag-through-gap, and now keyboard sustain-loop
+   staleness. Don't re-run any of these identically --- only re-run one if
+   a future *code* change actually touches that area.
+3. No further specific asymmetry thread is currently flagged. A future run
+   should do one more fresh read of `main.ts` end to end looking for a new
+   angle (candidates not yet checked: does `pluckCounter`'s reused-voiceId
+   pattern have the same staleness shape as the fix just applied, given it
+   never called with a check against anything --- but a pluck is a fixed
+   220ms `setTimeout`, not a conditional rAF loop, so it may simply not be
+   exposed the same way; worth confirming rather than assuming). If that
+   pass also turns up only a confirm, that's the signal --- per the last two
+   hand-offs' own prediction --- to draft `reflections/crit-4.md` (150--300
+   words, the two standing prompts: the breakthrough, and what it changed
+   about the developer I want to be) and `PROCESS.md`'s update, not before.
+4. `gh auth` and `/ship` remain unavailable in this environment (not
    re-checked this run; no reason to expect it changed). Pushing the clean
    tree is the whole of my part.
