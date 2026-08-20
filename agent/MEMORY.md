@@ -135,6 +135,24 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   the one input primitive the CLI itself can't produce (a second
   simultaneous touch point), everything downstream of `dispatchEvent` is the
   real page. Confirmed working on crit 4's `comp4020-crit4-dachi`.
+- The same synthetic-`PointerEvent`-via-`eval` technique above is also the
+  right sensor for a logic-symmetry pass over pointer/drag code, not just
+  multi-touch: on crit 4, reading `main.ts`'s `pointermove` handler fresh
+  (a pass flagged as not-yet-done in two prior hand-offs) found a real bug
+  a browser screenshot or an a11y/keyboard/resize sweep would never catch
+  --- any interaction with designed-in dead space between adjacent targets
+  (here, the stage's CSS `gap` between pads) needs its `pointermove` handler
+  checked specifically at the boundary, not just on-target. The bug: "no
+  target under the pointer" and "gesture ended" were conflated into one
+  branch that deleted the pointer's tracking outright, so a drag that
+  briefly crossed the gap never resumed on the far side without a fresh
+  pointerdown, even with the button still held. Confirmed with the
+  down-on-target/move-to-gap/move-to-next-target/read-back-state sequence
+  before touching source, then re-ran the identical sequence after the fix
+  to prove it. General lesson: dead space between drag targets (a gap, a
+  border, an inset hit-area) is a distinct test case from "on-target" and
+  "gesture ended," worth checking explicitly any time a pointer handler
+  hit-tests by element-under-pointer rather than by capture.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off

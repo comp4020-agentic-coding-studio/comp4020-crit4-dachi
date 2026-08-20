@@ -1,71 +1,74 @@
-# Hand-off --- crit 4 (an instrument), second run, ~155.5h to cutoff
+# Hand-off --- crit 4 (an instrument), third run, ~137.5h to cutoff
 
 ## State
 
-`comp4020-crit4-dachi`: Aurora Keys (eight-pad pentatonic light-instrument,
-built and shipped in the prior run) was already `pnpm check` green and pushed
-at the start of this run. Brief re-fetched fresh from `crits/04-instrument.json`
---- unchanged from last time (Web Audio, client-side only, no score/fail state,
-inviting silent opening, mouse/keyboard/touch, judged by ear at the crit).
+`comp4020-crit4-dachi`: Aurora Keys was `pnpm check` green and pushed at the
+start of this run, exactly matching the prior hand-off (nothing had touched
+the repo in between). Brief re-fetched fresh from `crits/04-instrument.json`
+--- unchanged again.
 
-This run was pure deepening, no rebuild:
+This run closed both open threads the last hand-off named:
 
-1. Live-verified multi-touch chording, the one open item flagged in the last
-   hand-off. The code already keyed everything by `pointerId`
-   (`pointerPad: Map<pointerId, index>`), so it should have worked, but
-   nothing had actually exercised two simultaneous touches. `agent-browser`'s
-   CLI has no multi-touch input primitive (`mouse`/`click` only move one
-   pointer), so verified it by dispatching two synthetic `PointerEvent`s with
-   distinct `pointerId`s (`pointerType: 'touch'`) at `#stage` via
-   `agent-browser eval`, then reading each pad's `--level` custom property
-   back: two pads sounded together, and lifting one `pointerId` left the
-   other still sounding. Confirmed correct, no bug --- recorded the technique
-   in the project's own `CLAUDE.md` (`4ac30e8`) since it's reusable for any
-   future multi-pointer interaction on any deliverable.
-2. Considered the legibility question from the last hand-off (is
-   swell-while-held / drag-for-brightness discoverable without being told?)
-   and deliberately left it alone: the brief's own crit format is "the pod
-   plays first... before any discussion happens," i.e. discovery-through-play
-   *is* the judgment being made, not a gap to patch with a hint label. Adding
-   instructional text would work against the brief's own "no instructions"
-   bar. Not a decision to revisit unless the crit itself says otherwise.
-3. Found one genuinely new mechanically-checkable spec line:
-   `spec/instrument.test.ts` tested "no score/fail state" and "no
-   instructions" but never asserted the brief's actual synthesis claim ---
-   "sound is made live in the page by the player, not played back." Added a
-   test asserting no `<audio>`/`<video>` element and no shipped audio-file
-   asset in `dist/` (`3fcbab9`). 23/23 green.
-4. Pushed both commits to `origin/main` (`4ac30e8`).
+1. **Live-verified `firstInteraction()`/`releaseAll()` under tab-blur.**
+   Dispatched a synthetic `pointerdown` on a pad, then a real `blur` event on
+   `window`, and read the pad's `--level` CSS custom property back: it went
+   from `0.5` to `0`. Confirmed correct, no bug.
+2. **Did the logic-symmetry pass on `main.ts`'s pointer/Voice/sustainKey code
+   the last two hand-offs had flagged as not yet done --- and found a real
+   bug, not a confirm.** The stage's CSS has a `gap` between every pad
+   (`clamp(0.4rem, 2vw, 1rem)`, `0.35rem` on mobile), so a real drag across
+   the row routinely passes over a strip that is over no pad. The old
+   `pointermove` handler treated "no pad under the pointer" as
+   `pointerPad.delete(pointerId)` --- dropping that pointer's tracking
+   outright. Since the handler's own guard is `if (pointerPad.get(id) ===
+   undefined) return`, a later move back onto any pad, while the mouse
+   button was still physically held, never retriggered `pressPad`: the drag
+   silently died at the first gap it crossed. This directly undercut the
+   "single drag across the row plays a run" behaviour the code's own
+   adjacent comment claims. Confirmed with the same synthetic-`PointerEvent`
+   technique used for multi-touch chording last run (down on pad 0, move to
+   the gap midpoint, move onto pad 1, read `--level` at each step) *before*
+   touching source, then again after the fix. Fix: a `NONE_HIT` sentinel
+   value in `pointerPad` marks "pointer down, currently over no pad" instead
+   of deleting the map entry, so hit-testing keeps running on every
+   subsequent move; only `pointerup`/`pointercancel` actually deletes now.
+   Pushed as two commits (`25d70fd` fix, `7a3ecbc` CLAUDE.md writeup).
+2. `pnpm check` stayed 23/23 green throughout (jsdom specs can't see this
+   runtime pointer logic at all --- confirmed via `spec/instrument.test.ts`'s
+   own comment, so this bug was only reachable by reading source and
+   live-verifying, not by a failing test).
+3. Pushed both commits to `origin/main`.
 
 `pnpm check` green (23/23 + typecheck + build). Working tree clean.
 `pnpm check:evidence` still fails on exactly one thing: no
-`reflections/crit-4.md` yet --- still correct this early (155.5h out).
+`reflections/crit-4.md` yet --- still correct this early (137.5h out, i.e.
+comfortably >24h, so no reason to write it yet).
 
 ## Next action
 
-Nothing broken, nothing urgent, no rebuild needed. A future run should keep
-treating this as deepen-not-reverify:
+Both threads named in the last two hand-offs are now closed (multi-touch
+confirmed clean two runs ago, blur confirmed clean this run, and the
+logic-symmetry pass this run found and fixed a real bug rather than just
+confirming). A future run should:
 
-1. Always re-check the brief first, even though it's very unlikely to change.
-2. The obvious sensors (a11y, keyboard, resize, reduced-motion, both marking
-   viewports, multi-touch) are all now live-verified at least once. Don't
-   re-run any of them identically next time --- if nothing's changed in the
-   code, a repeat run would just reproduce the same result. Re-run only the
-   ones a future *code* change actually touches.
-3. Remaining genuinely-open threads, roughly in order of promise:
-   - Re-read `main.ts`'s `Voice`/`sustainKey`/`pointermove` logic fresh for
-     an asymmetry the way `comp4020-ass1-dachi`'s `CLAUDE.md` describes doing
-     for that assignment's `context.ts` (see this file's `MEMORY.md` for the
-     pattern) --- nobody has done a logic-symmetry pass on this instrument's
-     own audio-graph code yet, only browser-level sensors.
-   - `firstInteraction()`/`releaseAll()` behaviour under an interrupted
-     gesture (tab-blur or backgrounding mid-note) is wired but not
-     live-verified --- `window.addEventListener("blur", releaseAll)` exists;
-     confirm in a real browser that backgrounding the tab mid-note actually
-     silences it rather than leaving a stuck oscillator.
-   - Once 1--2 more runs pass with nothing new to add, that's the signal to
-     draft `reflections/crit-4.md` (150--300 words, the two standing
-     prompts) --- not before.
-4. `gh auth` and `/ship` remain unavailable in this environment (didn't
-   re-check this run; no reason to expect it changed). Pushing the clean
+1. Always re-check the brief first, even though it keeps not changing.
+2. Don't re-run any of the now-exhausted sensors identically: a11y, keyboard,
+   resize, reduced-motion, both marking viewports, multi-touch chording,
+   tab-blur silencing, and now the pointer-drag-through-gap fix are all
+   live-verified at least once. Only re-run one if a future *code* change
+   actually touches that area.
+3. Remaining genuinely-open thread: the `sustainKey` rAF ramp
+   (`clamp01(0.4 + elapsed * 0.5)`) and the pluck-vs-hold keyboard path
+   haven't had the same "read fresh, look for an asymmetry" treatment the
+   pointer code just got --- e.g. does releasing a key mid-ramp and
+   re-pressing the same key before its `Voice.release()` decay finishes
+   double up any state, and does `activeKeys`/`activeVoices` ever disagree
+   the way `pointerPad` used to? Worth a similar pass before assuming
+   keyboard input is clean just because pointer input's bug got fixed.
+4. Once 1 more run passes with nothing new to add (or this keyboard-path
+   pass also turns up only confirms), that's the signal to draft
+   `reflections/crit-4.md` (150--300 words, the two standing prompts) ---
+   not before.
+5. `gh auth` and `/ship` remain unavailable in this environment (not
+   re-checked this run; no reason to expect it changed). Pushing the clean
    tree is the whole of my part.
