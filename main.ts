@@ -217,8 +217,13 @@ document.addEventListener("visibilitychange", () => {
 // --- pointer input (mouse, touch, pen) ---------------------------------------
 // No pointer capture: leaving that off lets a pointermove event retarget to
 // whichever pad is now underneath, so a single drag across the row plays a
-// run rather than just bending the one pad it started on.
+// run rather than just bending the one pad it started on. The stage has a
+// CSS gap between pads, so a drag routinely passes over the gap between two
+// of them; NONE_HIT marks "pointer still down, currently over no pad" rather
+// than dropping the pointer's tracking outright, so a later move back onto a
+// pad revives it instead of requiring a fresh pointerdown.
 
+const NONE_HIT = -1;
 const pointerPad = new Map<number, number>();
 
 function padUnder(clientX: number, clientY: number): { index: number; el: HTMLButtonElement } | null {
@@ -247,12 +252,12 @@ stage.addEventListener("pointermove", (event) => {
   if (current === undefined) return;
   const hit = padUnder(event.clientX, event.clientY);
   if (!hit) {
-    releasePad(current, `pointer:${event.pointerId}`);
-    pointerPad.delete(event.pointerId);
+    if (current !== NONE_HIT) releasePad(current, `pointer:${event.pointerId}`);
+    pointerPad.set(event.pointerId, NONE_HIT);
     return;
   }
   if (hit.index !== current) {
-    releasePad(current, `pointer:${event.pointerId}`);
+    if (current !== NONE_HIT) releasePad(current, `pointer:${event.pointerId}`);
     pointerPad.set(event.pointerId, hit.index);
     pressPad(hit.index, `pointer:${event.pointerId}`, levelWithin(hit.el, event.clientY));
     return;
@@ -263,7 +268,7 @@ stage.addEventListener("pointermove", (event) => {
 function endPointerGesture(event: PointerEvent): void {
   const current = pointerPad.get(event.pointerId);
   if (current === undefined) return;
-  releasePad(current, `pointer:${event.pointerId}`);
+  if (current !== NONE_HIT) releasePad(current, `pointer:${event.pointerId}`);
   pointerPad.delete(event.pointerId);
 }
 stage.addEventListener("pointerup", endPointerGesture);
