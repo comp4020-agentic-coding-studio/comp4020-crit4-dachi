@@ -300,14 +300,25 @@ pads.forEach((pad, index) => {
 // A short press plucks; holding a key swells it brighter and louder over
 // about a second, so the keyboard has its own kind of expression rather than
 // just aping a mouse click.
+//
+// Releasing a key and re-pressing it before the old rAF loop's holding
+// conditions go false (activeKeys/activeVoices are keyed by the key string
+// itself, so a fast release-then-repress leaves both true throughout) let the
+// old loop keep running forever alongside the new one, computing an
+// ever-growing stale elapsed time. A per-press token, bumped on every
+// keydown, gives a loop a way to notice a newer press has taken over its key
+// and stop rescheduling itself, the same role pluckCounter plays for reused
+// pluck voice ids above.
 
 const keyToIndex = new Map(SCALE.map((def, index) => [def.key, index]));
 const activeKeys = new Set<string>();
+const keyPressToken = new Map<string, number>();
 
-function sustainKey(key: string, index: number): void {
+function sustainKey(key: string, index: number, token: number): void {
   const voiceId = `key:${key}`;
   const start = performance.now();
   const step = (): void => {
+    if (keyPressToken.get(key) !== token) return;
     if (!activeKeys.has(key) || !activeVoices.has(voiceId)) return;
     const elapsed = (performance.now() - start) / 1000;
     movePad(index, voiceId, clamp01(0.4 + elapsed * 0.5));
@@ -324,7 +335,9 @@ window.addEventListener("keydown", (event) => {
   event.preventDefault();
   activeKeys.add(key);
   pressPad(index, `key:${key}`, 0.4);
-  sustainKey(key, index);
+  const token = (keyPressToken.get(key) ?? 0) + 1;
+  keyPressToken.set(key, token);
+  sustainKey(key, index, token);
 });
 
 window.addEventListener("keyup", (event) => {
