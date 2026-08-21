@@ -222,6 +222,16 @@ document.addEventListener("visibilitychange", () => {
 // of them; NONE_HIT marks "pointer still down, currently over no pad" rather
 // than dropping the pointer's tracking outright, so a later move back onto a
 // pad revives it instead of requiring a fresh pointerdown.
+//
+// move/up/cancel listen on window, not stage: without pointer capture, a
+// bubbled event only reaches a listener if the pointer is currently over
+// that element or one of its descendants. The stage is a small region with
+// page chrome all around it, so a real drag routinely leaves it entirely —
+// with these listeners on stage, releasing the pointer out there (or even
+// just moving there) never fired endPointerGesture, leaving the voice
+// sounding and the pad lit forever. window is always in the bubble path
+// regardless of where the pointer ends up; each handler already no-ops for
+// any pointerId that didn't start on a pad.
 
 const NONE_HIT = -1;
 const pointerPad = new Map<number, number>();
@@ -247,7 +257,7 @@ stage.addEventListener("pointerdown", (event) => {
   pressPad(hit.index, `pointer:${event.pointerId}`, levelWithin(hit.el, event.clientY));
 });
 
-stage.addEventListener("pointermove", (event) => {
+window.addEventListener("pointermove", (event) => {
   const current = pointerPad.get(event.pointerId);
   if (current === undefined) return;
   const hit = padUnder(event.clientX, event.clientY);
@@ -271,8 +281,8 @@ function endPointerGesture(event: PointerEvent): void {
   if (current !== NONE_HIT) releasePad(current, `pointer:${event.pointerId}`);
   pointerPad.delete(event.pointerId);
 }
-stage.addEventListener("pointerup", endPointerGesture);
-stage.addEventListener("pointercancel", endPointerGesture);
+window.addEventListener("pointerup", endPointerGesture);
+window.addEventListener("pointercancel", endPointerGesture);
 
 // A click with detail 0 is a keyboard activation (Enter/Space on a focused
 // button), not a pointer tap already handled above — Tab-and-Enter play too.
