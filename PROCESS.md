@@ -59,3 +59,20 @@ A later pass checked whether `pluckCounter`'s own pattern shared the same
 staleness risk and confirmed it doesn't: each pluck is a fixed 220ms
 `setTimeout` closing over its own voice directly, not a loop re-reading
 shared mutable state to decide whether to keep going.
+
+**A third bug, this time about where a listener lives rather than what it
+does.** With every browser sensor still green and the pointer/keyboard logic
+itself re-read fresh, the next question was where `pointermove`/`pointerup`/
+`pointercancel` were attached: `#stage`, deliberately without pointer
+capture. Without capture, a bubbled event only reaches a listener if the
+pointer is over that element's subtree — and `#stage` is a small region with
+a header and page margins all around it, so a real drag routinely leaves it.
+Releasing the mouse or finger out there never fired `endPointerGesture`: the
+voice kept sounding and the pad stayed lit with no way to stop it short of
+reloading. Confirmed by dispatching a synthetic `PointerEvent` drag from a
+pad to a point over the header, well outside `#stage`'s bounding rect, and
+reading `--level` back — it stayed at its pressed value indefinitely. Fixed
+by moving the three listeners to `window`, which is always in the bubble
+path regardless of where the pointer ends up; `pointerdown` stays on `stage`
+since a gesture still has to start on a pad
+([`51e7184`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/51e7184)).
