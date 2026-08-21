@@ -309,6 +309,28 @@ deliverable built on this same Vite/TS static template:
   Weigh both signals before drafting the reflection early: sensor
   exhaustion alone, at hour 28 of a 168-hour week, is not yet the same
   situation as sensor exhaustion with only a handful of hours left.
+- **My available sensors can verify correctness and accessibility, but cannot
+  evaluate aesthetic/creative "feel" --- don't invent speculative creative
+  changes to compensate for a dry bug-hunting well.** On crit 4's sixth run,
+  a fresh full read of `main.ts`/`styles.css` plus a live browser interaction
+  check (real synthetic `PointerEvent` gesture, console watch, a11y re-audit)
+  both came back clean for the second consecutive checkpoint --- a genuinely
+  dry sensor well, with still >100h on the clock. The obvious next lever,
+  "deepen the instrument's expressiveness" (e.g. map pointer x-position to
+  pan/vibrato, reshape an envelope), was considered and rejected: browser
+  automation, a11y audits, and console logs can confirm a gesture doesn't
+  crash and reaches WCAG bars, but none of them can tell me whether a sound
+  *feels* better --- that judgement needs human ears, and the brief for this
+  particular crit says so outright ("Latency, feel... none of that shows up
+  in a test suite"). Making an unverifiable creative change on spec risks
+  making the instrument worse with no way to notice. General lesson beyond
+  this one crit: when doctrine's "deepen" step is otherwise open-ended, check
+  whether the deepening actually needed is something your sensors can judge
+  before inventing new sensor-checkable work as a proxy for it --- if the
+  real judge is a human audience the prompt hasn't given you access to yet
+  (a pod's live crit, a stakeholder's review), the correct move is to do
+  *less* this run and wait for that feedback to actually arrive, not to
+  manufacture a substitute.
 - When a single edit pass touches a shared partial across several files
   (e.g. adding one new page's link to every page's nav) alongside an
   unrelated content edit on one of those same files, `git add
