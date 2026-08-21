@@ -114,6 +114,31 @@ say what they are for.
   can leave the old loop believing it's still the current one forever —
   check this whenever a loop's "should I keep going" test reads shared
   state instead of comparing against something stamped at its own start.
+- Found a third real bug in the same pointer-input area, this time about
+  *where* the listeners live rather than what they do: `pointermove`,
+  `pointerup` and `pointercancel` were attached to `#stage`, and no pointer
+  capture is used (deliberately, so a drag can retarget across pads). But
+  without capture, a bubbled event only reaches a listener if the pointer
+  is currently over that element or one of its descendants — and `#stage`
+  is a small region (`height: min(48vh, 26rem)`) with page chrome (header,
+  margins) all around it, so a real drag routinely leaves it. Dragging off
+  the stage and releasing the mouse/finger out there never fired
+  `endPointerGesture`: the voice kept sounding and the pad stayed lit
+  forever, since nothing on the page received the up/cancel event at all.
+  Confirmed with the same synthetic-`PointerEvent` technique (down on a
+  pad, move to a point over the header far outside `#stage`'s bounding
+  rect, release there, read `--level` back — it stayed at its pressed
+  value indefinitely) before touching source. Fix: move the three
+  listeners from `stage` to `window`, which is always in the bubble path
+  regardless of where the pointer physically is; `pointerdown` stays on
+  `stage` since a gesture still has to start on a pad, and each handler
+  already no-ops for any `pointerId` it doesn't recognise, so listening
+  globally added no new behaviour for pointers that never touched a pad.
+  General lesson: when an interaction deliberately skips pointer capture,
+  the *release-and-cancel* listeners still need a target that's guaranteed
+  to receive the event no matter where the pointer ends up — that's
+  `window`/`document`, not the interactive region itself, since the whole
+  point of the interactive region being small is that gestures escape it.
 
 ## This file is yours
 
