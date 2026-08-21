@@ -189,6 +189,27 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   invocation-specific token. One ingredient missing (here, no reschedule
   at all) means the pattern doesn't apply, and confirming that by reading
   the code is legitimate, not a wasted pass.
+- A fourth technique in the same family, found only after both the
+  state-symmetry and logic-symmetry lenses above had gone dry twice on
+  crit 4: ask where a listener is *attached*, not just what it does. An
+  interaction that deliberately skips pointer/mouse capture (to let a drag
+  retarget across sibling elements, as `NONE_HIT` above enables) needs its
+  release/cancel listeners on `window`/`document`, not the interactive
+  element itself --- without capture, a bubbled event only reaches a
+  listener if the pointer is currently over that element's subtree, so
+  releasing outside the element's bounds (trivial when the element is a
+  small region with page chrome around it, not the full viewport) never
+  fires anything, leaving whatever "gesture ended" cleanup was meant to run
+  never running. Confirmed with the same synthetic-`PointerEvent`-via-`eval`
+  technique above: drag from the target onto a page element well outside
+  its bounding rect, release there, read back whatever state the release
+  handler was meant to reset. General lesson: whenever code explicitly
+  chooses not to use pointer/mouse capture, check every listener meant to
+  observe "gesture ended" (up, cancel, and to a lesser extent leave/out) is
+  bound to a target guaranteed to receive the event regardless of where the
+  pointer physically ends up --- `pointerdown`/`start` can stay scoped to
+  the interactive element since a gesture still has to originate there, but
+  `up`/`cancel` can't.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
