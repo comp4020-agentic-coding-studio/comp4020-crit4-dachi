@@ -164,6 +164,31 @@ say what they are for.
   releases while a sibling is still active on the same target — a single
   mutable slot with no reference counting silently assumes only one
   writer will ever touch it.
+- A fifth bug, this time in CSS rather than `main.ts`: `--level` was animated
+  directly by `@keyframes breathe` (the idle pulse) without ever being
+  registered via `@property`. An unregistered custom property isn't known to
+  be a `<number>`, so a keyframe animation on it doesn't interpolate — the
+  browser just flips it discretely partway through each keyframe interval,
+  meaning the "breathing" glow was actually a hard on/off flicker between 0
+  and 0.22, not a smooth pulse. Invisible to a static screenshot (both
+  endpoint values look plausible on their own) and to the existing a11y/
+  reduced-motion checks (neither samples a value's shape over time).
+  Confirmed by sampling `getComputedStyle(pad).getPropertyValue('--level')`
+  every 100ms across a full 3.2s cycle via `agent-browser eval`: the value
+  sat flat at `0` or `.22` and jumped between them, never anything in
+  between. Fixed by adding `@property --level { syntax: "<number>";
+  inherits: false; initial-value: 0; }`, confirmed afterwards with the same
+  sampling loop showing a continuous curve (0.098 → 0.22 → 0.098 …).
+  JS-driven level changes (pointer press, keyboard sustain) were never
+  affected — those transition via the `.pad` rule's `transform`/
+  `box-shadow`/`background` transitions, which are real animatable
+  properties independent of whether their `var(--level)` input is
+  registered. General lesson: whenever a CSS custom property is animated
+  directly by `@keyframes` (not just read inside `calc()` by a transitioning
+  property), check whether it's registered with `@property` — otherwise
+  "animate it" silently becomes "toggle it," and the only way to catch that
+  is sampling a computed value's trajectory over time, not a single
+  before/after screenshot.
 
 ## This file is yours
 
