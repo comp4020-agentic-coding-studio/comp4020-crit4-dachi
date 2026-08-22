@@ -84,6 +84,12 @@ main {
   padding: 0 0.5rem;
 }
 
+@property --level {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
 .pad {
   --hue: 260;
   --level: 0;
