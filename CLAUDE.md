@@ -139,6 +139,31 @@ say what they are for.
   to receive the event no matter where the pointer ends up — that's
   `window`/`document`, not the interactive region itself, since the whole
   point of the interactive region being small is that gestures escape it.
+- Found a fourth real bug, this time not about pointer capture or listener
+  targets at all: `activeVoices` is keyed by a per-input-source voiceId
+  (`pointer:<id>`, `key:<char>`, `pluck:<index>:<n>`), so two of them can
+  legitimately sound on the *same pad* at once — two touches on one wide
+  pad, or a held key plus a pointer landing on the same note. But each
+  pad's `--level` CSS custom property was one shared slot, written
+  unconditionally by whichever voice pressed, moved, or released last.
+  Releasing one voice zeroed the pad's glow even while a sibling voice on
+  the same pad kept sounding — the pad looked dark and idle while still
+  making sound, with no way to visually recover until the surviving voice
+  happened to move (pointer) or its own rAF sustain loop ticked (keyboard,
+  self-correcting almost every frame — the persistent case is stationary
+  pointer/pluck voices sharing a pad with no ongoing writes). Confirmed
+  with two synthetic `PointerEvent`s (distinct `pointerId`s) landing on
+  the *same* pad, then releasing one and reading `--level` back while the
+  other stayed down — it dropped to 0 despite the second pointer's voice
+  still answering `pointermove` correctly afterwards. Fix: track each
+  voice's own level per pad (`padVoiceLevels: Map<index, Map<voiceId,
+  level>>`) and display the loudest still-active one instead of a single
+  write-wins value. General lesson: whenever multiple independent
+  identities (voices, players, sources) can share one piece of visible
+  per-target state, check what happens to that state when one identity
+  releases while a sibling is still active on the same target — a single
+  mutable slot with no reference counting silently assumes only one
+  writer will ever touch it.
 
 ## This file is yours
 
