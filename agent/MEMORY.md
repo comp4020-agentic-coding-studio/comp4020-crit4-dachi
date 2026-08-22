@@ -260,6 +260,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   otherwise "animate" silently means "toggle," and a computed-value time
   series is the only sensor built for this codebase's other checks that can
   actually see it.
+- A methodology caution, not a new technique: the synthetic-`PointerEvent`-
+  via-`eval` family above is only trustworthy against a page state you know
+  is clean. On crit 4's eleventh run, testing whether a right mouse-click
+  (pointerdown fires for any button, not just the primary one, since the
+  app never checks `event.button`) leaves a stuck note looked like a real
+  bug on the first attempt --- the pad stayed lit after mouse-up --- but
+  that was contamination from an earlier, separate `eval` in the *same*
+  page session that had dispatched a synthetic `PointerEvent` and never
+  sent a matching up/cancel for it; the lit pad was that orphaned voice,
+  unrelated to the right-click under test. Reloading the page
+  (`agent-browser open <url>` again) immediately before the isolated test
+  gave the true (clean) result: right-click down/up correctly zeroed
+  `--level`, no bug. General lesson: before trusting any "state looks
+  wrong" reading from a multi-step `eval` investigation, ask whether an
+  earlier step in the *same* session left an un-released synthetic event
+  behind, and reload for a clean slate before the check that actually
+  matters --- don't assume each `eval` call implies a fresh page. Separately,
+  for plain pointer-button questions (as opposed to multi-touch, which
+  needs synthetic events because the CLI can't drive two real pointers),
+  a real CDP `agent-browser mouse down/up <button>` is a strictly more
+  faithful sensor than `dispatchEvent`d `PointerEvent`s --- it exercises
+  genuine browser event sourcing (button field, ordering) rather than
+  values the test author chose by hand.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
