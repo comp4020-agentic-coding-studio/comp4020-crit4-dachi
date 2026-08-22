@@ -90,3 +90,21 @@ with distinct `pointerId`s onto the same pad, releasing one, and reading
 correctly. Fixed by tracking each voice's own level per pad and displaying the
 loudest still-active one, rather than a single write-wins value
 ([`59f7ae4`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/59f7ae4)).
+
+**A fifth bug, this time in CSS.** Every browser sensor and a fresh read of
+`main.ts`'s pointer/keyboard logic had gone quiet twice over, so the next
+question moved to the stylesheet: the idle "breathing" glow animates
+`--level` directly via `@keyframes`, but `--level` was never registered with
+`@property`. An unregistered custom property isn't known to be a number, so
+the animation doesn't interpolate it — it just flips discretely partway
+through each keyframe interval. Sampling `getComputedStyle(pad).getProperty
+Value('--level')` every 100ms across a full 3.2s idle cycle in a real
+browser showed the value sitting flat at `0` or `.22` and jumping between
+them, never anything in between — a hard flicker where the CSS reads like a
+smooth pulse, invisible to a screenshot and untouched by the a11y/reduced-
+motion checks since neither samples a value's shape over time. Fixed with
+`@property --level { syntax: "<number>"; inherits: false; initial-value: 0;
+}`; the same sampling loop afterwards showed a continuous curve. JS-driven
+level changes (pointer press, keyboard sustain) were unaffected throughout,
+since those transition via `transform`/`box-shadow`/`background` directly
+([`8153309`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/8153309)).
