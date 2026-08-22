@@ -165,8 +165,39 @@ class Voice {
 
 const activeVoices = new Map<string, Voice>();
 
+// A pad's --level is one shared visual slot, but voiceIds are namespaced per
+// input source (pointer/key/pluck), so two of them can legitimately sound on
+// the same pad at once. Track each voice's own level per pad and display the
+// loudest still-active one, so one voice releasing doesn't blank the pad's
+// glow out from under a sibling voice that's still sounding on it.
+const padVoiceLevels = new Map<number, Map<string, number>>();
+
 function setPadLevel(index: number, level: number): void {
   pads[index]?.style.setProperty("--level", String(level));
+}
+
+function applyPadLevel(index: number): void {
+  const levels = padVoiceLevels.get(index);
+  const level = levels && levels.size > 0 ? Math.max(...levels.values()) : 0;
+  setPadLevel(index, level);
+}
+
+function setVoiceLevel(index: number, voiceId: string, level: number): void {
+  let levels = padVoiceLevels.get(index);
+  if (!levels) {
+    levels = new Map();
+    padVoiceLevels.set(index, levels);
+  }
+  levels.set(voiceId, level);
+  applyPadLevel(index);
+}
+
+function clearVoiceLevel(index: number, voiceId: string): void {
+  const levels = padVoiceLevels.get(index);
+  if (!levels) return;
+  levels.delete(voiceId);
+  if (levels.size === 0) padVoiceLevels.delete(index);
+  applyPadLevel(index);
 }
 
 function firstInteraction(): void {
@@ -183,14 +214,14 @@ function pressPad(index: number, voiceId: string, level: number): void {
   const voice = new Voice(ctx, SCALE[index]!.freq, masterGain, sendGain);
   voice.setLevel(level);
   activeVoices.set(voiceId, voice);
-  setPadLevel(index, level);
+  setVoiceLevel(index, voiceId, level);
 }
 
 function movePad(index: number, voiceId: string, level: number): void {
   const voice = activeVoices.get(voiceId);
   if (!voice) return;
   voice.setLevel(level);
-  setPadLevel(index, level);
+  setVoiceLevel(index, voiceId, level);
 }
 
 function releasePad(index: number, voiceId: string): void {
@@ -198,7 +229,7 @@ function releasePad(index: number, voiceId: string): void {
   if (!voice) return;
   voice.release();
   activeVoices.delete(voiceId);
-  setPadLevel(index, 0);
+  clearVoiceLevel(index, voiceId);
 }
 
 function releaseAll(): void {
@@ -206,6 +237,7 @@ function releaseAll(): void {
   activeVoices.clear();
   pointerPad.clear();
   activeKeys.clear();
+  padVoiceLevels.clear();
   pads.forEach((_, index) => setPadLevel(index, 0));
 }
 
@@ -297,11 +329,11 @@ pads.forEach((pad, index) => {
     const voice = new Voice(ctx, SCALE[index]!.freq, masterGain, sendGain);
     voice.setLevel(0.6);
     activeVoices.set(voiceId, voice);
-    setPadLevel(index, 0.6);
+    setVoiceLevel(index, voiceId, 0.6);
     setTimeout(() => {
       voice.release();
       activeVoices.delete(voiceId);
-      setPadLevel(index, 0);
+      clearVoiceLevel(index, voiceId);
     }, 220);
   });
 });
