@@ -210,6 +210,32 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   pointer physically ends up --- `pointerdown`/`start` can stay scoped to
   the interactive element since a gesture still has to originate there, but
   `up`/`cancel` can't.
+- A fifth technique in the same family, found on crit 4's ninth run after the
+  listener-placement lens above had already found and fixed its one bug and
+  gone dry on a repeat pass: ask what happens to one piece of shared
+  per-target visual state when two independent identities (voices, players,
+  input sources) legitimately act on the same target at once. Aurora Keys
+  keys its active voices by a per-input-source id (`pointer:<pointerId>`,
+  `key:<char>`, `pluck:<index>:<n>`), which deliberately lets a held key and
+  a pointer, or two touches, sound on the *same pad* simultaneously --- but
+  each pad's `--level` CSS custom property was one write-wins slot, set
+  unconditionally by whichever voice pressed, moved, or released last.
+  Releasing one voice zeroed the pad's glow even while a sibling voice on
+  that same pad kept sounding, invisible until the surviving voice happened
+  to move. Confirmed with two synthetic `PointerEvent`s (distinct
+  `pointerId`s) landing on one pad, releasing one, and reading `--level`
+  back while the other stayed down and kept answering `pointermove`
+  correctly afterwards --- proving the dark pad was a pure visual bug, not
+  a dropped voice. Fixed by tracking each voice's own level per target and
+  displaying an aggregate (here, the loudest still-active one) instead of a
+  single mutable slot. General lesson: a state-symmetry pass usually asks
+  "do this function's own tests/branches agree with each other"; this is
+  the multi-writer variant --- whenever an id scheme is deliberately widened
+  to let several independent things act on one shared target (a namespaced
+  voiceId, a per-user cursor, a per-tab lock), check every place that target
+  has a single piece of mutable state written by more than one of those
+  ids, and ask what the last writer clobbers when it isn't the only one
+  still active.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
