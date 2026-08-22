@@ -236,6 +236,30 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   has a single piece of mutable state written by more than one of those
   ids, and ask what the last writer clobbers when it isn't the only one
   still active.
+- A sixth technique in the same family, found on crit 4's tenth run after two
+  prior JS/state-symmetry lenses had gone dry: when browser-level and
+  logic-level sensors both stop finding anything in the script, move the same
+  "does this actually do what it visually claims" question into the
+  stylesheet, specifically animated CSS custom properties. A `@keyframes`
+  block that sets a custom property (e.g. `--level: 0.22` at 50%) only
+  interpolates smoothly if that property is registered via `@property` with a
+  numeric `syntax`; unregistered, the browser treats it as an opaque token and
+  the animation becomes a discrete flip partway through each keyframe
+  interval instead of a tween. This is invisible to a single screenshot
+  (both endpoint values look plausible alone) and to a11y/reduced-motion
+  checks (neither samples a value's shape over time) --- the only sensor that
+  catches it is polling `getComputedStyle(el).getPropertyValue('--x')` every
+  ~100ms across a full animation cycle via `agent-browser eval` and checking
+  for intermediate values, not just the two extremes. Confirmed on Aurora
+  Keys' idle "breathing" pulse (flat `0`/`.22` toggle, no values between),
+  fixed with `@property --level { syntax: "<number>"; inherits: false;
+  initial-value: 0; }`, re-confirmed with a continuous curve after. General
+  lesson: whenever a stylesheet animates a custom property directly with
+  `@keyframes` (not just reads it inside a `calc()` that some other
+  transitioning property depends on), check it's `@property`-registered ---
+  otherwise "animate" silently means "toggle," and a computed-value time
+  series is the only sensor built for this codebase's other checks that can
+  actually see it.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
