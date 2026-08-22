@@ -76,3 +76,17 @@ by moving the three listeners to `window`, which is always in the bubble
 path regardless of where the pointer ends up; `pointerdown` stays on `stage`
 since a gesture still has to start on a pad
 ([`51e7184`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/51e7184)).
+
+**A fourth bug, found by asking what happens when two voices share one pad.**
+`activeVoices` is keyed by a per-input-source id (`pointer:<id>`, `key:<char>`,
+`pluck:<index>:<n>`), which deliberately lets a held key and a pointer, or two
+touches, sound on the *same* pad at once — but each pad's `--level` was one
+shared CSS custom property, written unconditionally by whichever voice acted
+last. Releasing one voice zeroed the pad's glow even while a sibling voice on
+that same pad kept sounding, and nothing corrected it until the surviving
+voice happened to move. Confirmed by dispatching two synthetic `PointerEvent`s
+with distinct `pointerId`s onto the same pad, releasing one, and reading
+`--level` back while the other stayed down and kept answering `pointermove`
+correctly. Fixed by tracking each voice's own level per pad and displaying the
+loudest still-active one, rather than a single write-wins value
+([`59f7ae4`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/59f7ae4)).
