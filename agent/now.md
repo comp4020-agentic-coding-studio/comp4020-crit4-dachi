@@ -1,60 +1,74 @@
-# Hand-off --- crit 4 (an instrument), twelfth run, 65.5h to cutoff
+# Hand-off --- crit 4 (an instrument), thirteenth run, 59.5h to cutoff
 
 ## State
 
 `comp4020-crit4-dachi`: Aurora Keys. Brief re-fetched fresh --- unchanged
 again (same spec, same building blocks, cold-open crit format, still no
-scoring/fail-state).
+scoring/fail-state). `git status` clean, HEAD still `4ed5603` (previous
+run's `cffadfd` fix already on `origin/main`; the `4ed5603` snapshot commit
+sits on top). No code changed this run.
 
-This run tried a fresh lens after the eleventh run's dry pass: not "does the
-instrument's own logic agree with itself" (five bugs found that way already)
-but "does it agree with the browser and OS around it." Found and fixed a
-sixth real bug: the keydown handler plays a note and unconditionally
-`preventDefault()`s for any of the eight scale letters (`a s d f g h j k`)
-with no check on `ctrlKey`/`metaKey`/`altKey`. `event.key` for a letter is
-unchanged by those modifiers, so `Ctrl+F` (find), `Ctrl+A` (select all),
-`Ctrl+S` (save), `Cmd+D` (bookmark), `Ctrl+H`, `Ctrl+J`, `Ctrl+K`, `Ctrl+G`
-all matched a scale key, ate the real browser shortcut, and played an
-unrequested note. Confirmed live with a real CDP `agent-browser press
-Control+f` (not synthetic dispatch --- needed genuine shortcut arbitration):
-`defaultPrevented` came back `true` and the hint went quiet before the fix,
-`false` and silent after. Fix: one guard
-(`if (event.ctrlKey || event.metaKey || event.altKey) return;`) ahead of the
-scale-key lookup in `main.ts`. Re-confirmed a bare `f` still plays.
-`pnpm check` green (23/23), a11y re-audit clean (0 violations, same two
-known `incomplete` shapes as always). Committed as three commits (fix,
-CLAUDE.md, PROCESS.md) and pushed --- `cffadfd` is HEAD on `origin/main`.
+This run closed out the two open questions the twelfth run's hand-off left,
+plus tried one genuinely new sensor family. All three came back clean --- a
+legitimate dry run, not a gap in effort:
+
+1. **Shift+letter, precisely confirmed.** `Shift+F` really does produce
+   `event.key === "F"`; `.toLowerCase()` folds it back to a scale key, the
+   handler plays a note and calls `preventDefault()`. But Shift+letter alone
+   isn't a live OS/browser shortcut the way Ctrl/Cmd/Alt+letter is (checked
+   via real CDP `agent-browser press Shift+F`, not synthetic dispatch), so
+   this is fine as-is --- no fix needed, matches the hand-off's own guess.
+2. **A fresh DOM/ARIA-behaviour read**, distinct from axe's static-markup
+   audit: pulled the real accessibility tree (`agent-browser snapshot -i
+   --json`) and confirmed all eight pads expose as `button "play <note>"`
+   with no stray nodes, and confirmed the focus-visible outline
+   (`.pad:focus-visible { outline: 3px solid #fff }`) is real and clearly
+   visible in a screenshot after `Tab`. Considered and rejected two
+   speculative "gaps" as non-bugs: no `aria-live` announcement per note
+   (would be intrusive chatter over an instrument meant to be heard, not
+   narrated) and no `aria-pressed` toggle (momentary plucks don't map to a
+   toggle state cleanly). Also reasoned through screen-reader browse-mode
+   quick-nav keys (NVDA's bare `h`/`b`/`f` etc. collide with this scale's
+   own letters) but concluded it isn't a blocking bug: Tab+Enter/Space
+   already gives full keyboard operability independent of the letter
+   shortcuts, which are a sighted/mouse-first enhancement, not the only
+   path.
+3. **Performance, checked for the first time on this repo** (assignment 1
+   got this sensor, crit 4 hadn't yet): served `dist/` on a plain
+   `python3 -m http.server`, read real Navigation Timing --- `domComplete`
+   at ~15ms, JS+CSS bundle 6.24kB/2.39kB (gzip 2.54kB/1.14kB per the Vite
+   build output). Comfortably clears any realistic slow-connection bar by
+   size alone; no work needed here, same reasoning as assignment 1's
+   equivalent check.
+
+`pnpm check` reconfirmed green (23/23) at the top of the run before any of
+the above.
 
 ## Next action
 
 1. Always re-check the brief first.
-2. Lenses confirmed to find real bugs across twelve runs: state-symmetry,
-   logic-symmetry, listener-placement, per-target multi-writer state, CSS
-   custom-property registration, and now app-vs-browser shortcut collision
-   --- six real bugs total. Lenses tried and gone dry: button-agnostic
-   pointerdown, blur/visibilitychange stuck-note class.
-3. Not yet tried, worth a look next run if this codebase keeps yielding:
-   whether Shift+letter (which does change `event.key`, e.g. Shift+f is
-   still "f" since these are lowercase letters already --- actually check
-   this precisely, Shift+a on a US layout still gives event.key "A" not
-   "a", and the handler does `.toLowerCase()`, so Shift+scale-letter still
-   plays a note; is that a problem? Shift+letter isn't a live OS/browser
-   shortcut on its own the way Ctrl/Cmd/Alt are, so probably fine, but
-   worth a two-minute confirm rather than assuming). Also not yet checked:
-   whether holding a scale key down while the OS IME/dead-key composition
-   is active does anything unexpected (very likely irrelevant for ASCII
-   letter keys, low priority).
-4. 65.5h is still comfortably >24h. A dry run is a legitimate outcome; this
-   run wasn't dry. Keep trying genuinely fresh questions before concluding
-   the codebase is exhausted --- "does it agree with itself" and "does it
-   agree with its environment" are two different question families, and
-   there may be a third (e.g. "does it agree with what the DOM/ARIA claims
-   about it" was partly covered by a11y audits already, but a fresh
-   screen-reader-behaviour read, not just axe's static-markup check, has
-   never been done here).
-5. The one legitimate lever left for *creative* deepening is real human
+2. Six real bugs found across thirteen runs (state-symmetry, logic-symmetry,
+   listener-placement, per-target multi-writer state, CSS custom-property
+   registration, app-vs-browser shortcut collision). Lenses now tried and
+   gone dry: button-agnostic pointerdown, blur/visibilitychange stuck-note
+   class, Shift+letter, DOM/ARIA accessibility-tree read, performance/
+   Navigation Timing. That's a lot of independently-dry sensors stacking up
+   --- worth noticing if the next run or two also comes back empty.
+3. Nothing left on the "not yet tried" list from prior hand-offs. If a
+   fourteenth run starts here, don't just re-run the same five dry lenses
+   again for a fourth+ confirm each --- either find a genuinely new question
+   (the six-bug track record suggests there may be one; past examples were
+   "does it agree with itself," "does it agree with the browser/OS," "does
+   it agree with the DOM/ARIA it claims," so a fourth axis is plausible but
+   hasn't been found yet) or accept the well may be closer to actually dry
+   than at any prior checkpoint and shift toward `PROCESS.md`/reflections
+   prep once the clock genuinely warrants it.
+4. The one legitimate lever left for *creative* deepening is real human
    feedback from the pod at the actual crit, not anything to simulate ---
-   don't invent audio/interaction changes speculatively.
-6. `gh auth`/`/ship` remain unavailable/unnecessary in this environment;
-   push (plain `git push`) is this agent's own job when there's something
-   to push --- done this run.
+   don't invent audio/interaction changes speculatively. This has been true
+   for several runs running; still true.
+5. `reflections/crit-4.md` correctly not yet written --- that's a
+   final-run finishing step per doctrine, and 59.5h is not yet inside the
+   24h "finish" window.
+6. `gh auth`/`/ship` remain unavailable/unnecessary in this environment.
+   Nothing to push this run (no commits made).

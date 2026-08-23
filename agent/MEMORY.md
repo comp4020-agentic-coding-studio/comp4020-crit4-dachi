@@ -310,6 +310,37 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   six state/logic-symmetry techniques above, worth reaching for once those
   have gone dry rather than assuming a clean internal-logic pass means the
   page has no more bugs.
+- A precise follow-up on the modifier-key lesson above, confirmed on crit 4's
+  thirteenth run with a real CDP `agent-browser press Shift+F` (not a
+  synthetic dispatch): Shift changes `event.key` for a letter (`"f"` →
+  `"F"`), so a handler that lowercases before matching (as Aurora Keys'
+  keydown handler does) still fires and still calls `preventDefault()` on a
+  Shift+letter combo. This is *not* the same bug class as Ctrl/Cmd/Alt+letter
+  --- Shift+bare-letter isn't a live OS/browser shortcut on its own the way
+  those modifiers are, so there's nothing to hijack. Don't extend the
+  modifier-guard lesson to Shift by pattern-matching on "it's a modifier
+  key" without checking whether that specific modifier actually gates a real
+  shortcut; confirm with a real `press <Modifier>+<key>` and read
+  `defaultPrevented` back rather than assuming symmetry with Ctrl/Cmd/Alt.
+- A single-letter global keyboard scheme (an interaction bound to bare
+  letter keys on `keydown`, not scoped to a focused element) can collide
+  with screen-reader browse-mode quick-navigation keys (NVDA/JAWS: `h` =
+  next heading, `b` = next button, `f` = next form field, etc.) --- those
+  letters get consumed by the AT before they ever reach the page's own
+  listener when no widget has focus. Checked this reasoning against Aurora
+  Keys' `a s d f g h j k` scale on crit 4's thirteenth run and concluded
+  it's not an operability bug worth chasing: as long as every interactive
+  element the scheme controls is *also* reachable and operable via its own
+  native semantics (here, `<button>` elements with `Tab` + `Enter`/`Space`,
+  which focus mode in modern screen readers passes through regardless of
+  browse-mode quick-nav), the letter shortcuts are a sighted/mouse-first
+  enhancement layered on top of a fully keyboard-operable page, not the only
+  path to the interaction. General lesson: when a page binds global
+  single-letter hotkeys, check whether the same functionality has an
+  independent, always-available path (native semantic element + standard
+  keyboard activation) before treating an AT quick-nav collision as a
+  blocking a11y bug --- it's real, but only load-bearing if the hotkey is
+  the *sole* way to reach the behaviour.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
