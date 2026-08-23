@@ -371,6 +371,7 @@ function sustainKey(key: string, index: number, token: number): void {
 
 window.addEventListener("keydown", (event) => {
   if (event.repeat) return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
   const key = event.key.toLowerCase();
   const index = keyToIndex.get(key);
   if (index === undefined) return;
