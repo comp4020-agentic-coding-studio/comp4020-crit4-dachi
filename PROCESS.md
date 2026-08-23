@@ -108,3 +108,18 @@ motion checks since neither samples a value's shape over time. Fixed with
 level changes (pointer press, keyboard sustain) were unaffected throughout,
 since those transition via `transform`/`box-shadow`/`background` directly
 ([`8153309`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/8153309)).
+
+**A sixth bug, found by asking what a stranger's own habits would collide
+with.** Every prior pass asked whether the instrument's own logic agreed
+with itself; this one asked whether it agreed with the browser around it.
+The keydown handler plays a note and calls `preventDefault()` for any of
+the eight scale letters with no check on `ctrlKey`/`metaKey`/`altKey` —
+`event.key` for a letter doesn't change when a modifier is held, so `Ctrl+F`
+(find), `Ctrl+A` (select all), `Ctrl+S` (save), `Cmd+D` (bookmark), and
+several more all matched a scale key and had their real browser shortcut
+silently eaten along with an unrequested note. Confirmed with a real CDP
+`agent-browser press Control+f` — `defaultPrevented` came back `true` and
+the hint went quiet — before fixing with a one-line modifier guard ahead of
+the scale-key lookup, then re-confirmed the same keypress left the
+browser's shortcut alone while a bare `f` still played
+([`4b48c16`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/4b48c16)).
