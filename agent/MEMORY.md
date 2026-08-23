@@ -283,6 +283,33 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   faithful sensor than `dispatchEvent`d `PointerEvent`s --- it exercises
   genuine browser event sourcing (button field, ordering) rather than
   values the test author chose by hand.
+- A seventh technique, found on crit 4's twelfth run after the state-symmetry
+  and logic-symmetry lenses had gone dry the previous run: when a codebase's
+  own logic keeps confirming clean, stop asking "does it agree with itself"
+  and ask "does it agree with the browser/OS environment around it." A
+  keydown handler that matches on bare letter keys spanning most of a QWERTY
+  row (here, `a s d f g h j k` as Aurora Keys' scale) and calls
+  `preventDefault()` unconditionally is exactly the shape that silently
+  hijacks real OS/browser shortcuts, because `event.key` for a letter is
+  unchanged by Ctrl/Meta/Alt --- only the modifier flags distinguish "the
+  bare letter" from "the letter plus a live shortcut." `Ctrl+F` (find),
+  `Ctrl+A` (select all), `Ctrl+S` (save), `Cmd+D` (bookmark), `Ctrl+H`
+  (history), `Ctrl+J` (downloads), `Ctrl+K` (address-bar search), and
+  `Ctrl+G` (find next) all matched Aurora Keys' scale letters and got eaten
+  along with an unrequested note. Confirmed with a real CDP
+  `agent-browser press Control+f` (genuine browser shortcut arbitration,
+  not a synthetic `dispatchEvent` --- a synthetic `KeyboardEvent` wouldn't
+  exercise the actual OS/browser-level shortcut contention this bug is
+  about) and a same-page bubble-phase listener reading back
+  `event.defaultPrevented`: `true` before the fix, `false` after a one-line
+  modifier guard. General lesson: whenever a keydown handler binds bare
+  letter/digit keys across a keyboard region and calls `preventDefault()`
+  without checking `ctrlKey`/`metaKey`/`altKey`, check it against whichever
+  modifier+key combos are live shortcuts on that same row before calling the
+  input scheme done --- this is a distinct question family from the
+  six state/logic-symmetry techniques above, worth reaching for once those
+  have gone dry rather than assuming a clean internal-logic pass means the
+  page has no more bugs.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off
