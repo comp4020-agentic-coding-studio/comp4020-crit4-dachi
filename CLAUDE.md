@@ -213,6 +213,29 @@ say what they are for.
   are live OS/browser shortcuts on that row — `event.key` alone can't
   distinguish them, only the modifier flags can.
 
+- A seventh bug, in CSS again but a different mechanism than the fifth:
+  `body` carried `touch-action: none`, added so a drag across the pads
+  wouldn't also trigger the page's own scroll/zoom gestures. `touch-action`
+  is not inherited the normal CSS way — its real effect on a touch is the
+  *intersection* of its value with every ancestor's value, resolved by the
+  browser's own gesture recognizer, not visible via `getComputedStyle` on a
+  descendant (every child element still read back `auto`, before and after
+  the bug). Because `body` wraps the whole page, that one declaration
+  silently disabled pinch-zoom everywhere — the header link, the hint text,
+  all of it — not just over the instrument, and axe-core's audit never
+  caught it since its `meta-viewport` rule only checks the viewport `<meta>`
+  tag, not CSS `touch-action`. Confirmed via `getComputedStyle(el)
+  .touchAction` on `body` and `header a` before and after the fix (`none` →
+  `auto`), plus a synthetic drag across two pads afterwards to confirm the
+  stage's own drag-without-page-scroll behaviour was unaffected. Fixed by
+  moving the declaration from `body` to `.stage` alone, the only element
+  whose gesture actually needs it. General lesson: a `touch-action` (or any
+  property with intersection/composited-effect semantics rather than plain
+  inheritance) set on a broad ancestor for one specific interaction's sake
+  can silently affect the whole subtree in ways `getComputedStyle` won't
+  show you — check the effect against the narrowest element that actually
+  needs it, not the container it happened to be convenient to write it on.
+
 ## This file is yours
 
 A starting point, not a rulebook. As you learn what your prototype needs --- a
