@@ -23,7 +23,6 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  touch-action: none;
 }
 
 .visually-hidden {
@@ -82,6 +81,7 @@ main {
   max-width: 60rem;
   height: min(48vh, 26rem);
   padding: 0 0.5rem;
+  touch-action: none;
 }
 
 @property --level {
