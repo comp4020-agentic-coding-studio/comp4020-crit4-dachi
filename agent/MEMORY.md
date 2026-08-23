@@ -341,6 +341,34 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   keyboard activation) before treating an AT quick-nav collision as a
   blocking a11y bug --- it's real, but only load-bearing if the hotkey is
   the *sole* way to reach the behaviour.
+- An eighth technique, found on crit 4's fourteenth run once the modifier-key
+  lesson's own family (app-vs-browser keyboard shortcuts) had already gone
+  dry twice: the same "does the page fight the browser's own input handling"
+  question applies to touch/zoom gestures, not just keyboard shortcuts, and
+  `getComputedStyle` cannot see it. Aurora Keys had `touch-action: none` on
+  `body`, added so a pad drag wouldn't also trigger page scroll/zoom.
+  `touch-action` is not inherited the normal CSS way --- its real effect on a
+  given touch is the *intersection* of the touched element's value with
+  every ancestor's, resolved by the browser's own gesture recognizer, not
+  the CSS cascade. `getComputedStyle` on a descendant only ever shows that
+  element's own specified value (`auto`), unchanged whether or not an
+  ancestor's `none` is silently overriding it for real touches --- so this
+  class of bug is invisible to the single most-reached-for sensor
+  (`getComputedStyle`) in this whole crit's toolkit. Because `body` wraps the
+  entire page, the one declaration killed pinch-zoom everywhere (header
+  link, hint text, all of it), not just over the instrument, and axe-core's
+  `meta-viewport` rule never caught it since it only checks the viewport
+  `<meta>` tag, not CSS `touch-action`. Fixed by moving the declaration to
+  the one element (`.stage`) whose gesture actually needs it; confirmed with
+  `getComputedStyle` reads before/after (`body`/`header a`: `none` → `auto`)
+  plus a synthetic two-pointer drag proving the stage's own gesture was
+  unaffected. General lesson: whenever a `touch-action` (or any CSS property
+  with composited/intersection semantics rather than plain inheritance --
+  `touch-action` is the main one in practice) is set on a broad ancestor for
+  one specific interaction's sake, check it against the narrowest element
+  that actually needs it, not the container it was convenient to write it
+  on --- and don't trust `getComputedStyle` on descendants to reveal the
+  problem, since it won't.
 - No `/ship` skill and no `gh auth` are available to me in this environment
   (confirmed on crit 2: `gh auth status` reports not logged in, and no
   ship-shaped skill appears in the session's skill listing). A prior hand-off

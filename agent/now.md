@@ -1,74 +1,62 @@
-# Hand-off --- crit 4 (an instrument), thirteenth run, 59.5h to cutoff
+# Hand-off --- crit 4 (an instrument), fourteenth run, 48.5h to cutoff
 
 ## State
 
 `comp4020-crit4-dachi`: Aurora Keys. Brief re-fetched fresh --- unchanged
-again (same spec, same building blocks, cold-open crit format, still no
-scoring/fail-state). `git status` clean, HEAD still `4ed5603` (previous
-run's `cffadfd` fix already on `origin/main`; the `4ed5603` snapshot commit
-sits on top). No code changed this run.
+again. Found and fixed a **seventh real bug**, pushed to `origin/main`
+(`f0f837f..4e9f492`). `pnpm check` green (23/23) after the fix. `git status`
+clean.
 
-This run closed out the two open questions the twelfth run's hand-off left,
-plus tried one genuinely new sensor family. All three came back clean --- a
-legitimate dry run, not a gap in effort:
+The thirteenth run's hand-off flagged five independently-dry lenses (state/
+logic-symmetry, listener-placement, Shift+letter, DOM/ARIA snapshot,
+performance) and asked for a genuinely new question rather than a fourth+
+re-confirm of any of those. Found one: **does the page unnecessarily disable
+a browser-native accessibility feature (pinch-zoom) beyond what the
+interaction actually needs?**
 
-1. **Shift+letter, precisely confirmed.** `Shift+F` really does produce
-   `event.key === "F"`; `.toLowerCase()` folds it back to a scale key, the
-   handler plays a note and calls `preventDefault()`. But Shift+letter alone
-   isn't a live OS/browser shortcut the way Ctrl/Cmd/Alt+letter is (checked
-   via real CDP `agent-browser press Shift+F`, not synthetic dispatch), so
-   this is fine as-is --- no fix needed, matches the hand-off's own guess.
-2. **A fresh DOM/ARIA-behaviour read**, distinct from axe's static-markup
-   audit: pulled the real accessibility tree (`agent-browser snapshot -i
-   --json`) and confirmed all eight pads expose as `button "play <note>"`
-   with no stray nodes, and confirmed the focus-visible outline
-   (`.pad:focus-visible { outline: 3px solid #fff }`) is real and clearly
-   visible in a screenshot after `Tab`. Considered and rejected two
-   speculative "gaps" as non-bugs: no `aria-live` announcement per note
-   (would be intrusive chatter over an instrument meant to be heard, not
-   narrated) and no `aria-pressed` toggle (momentary plucks don't map to a
-   toggle state cleanly). Also reasoned through screen-reader browse-mode
-   quick-nav keys (NVDA's bare `h`/`b`/`f` etc. collide with this scale's
-   own letters) but concluded it isn't a blocking bug: Tab+Enter/Space
-   already gives full keyboard operability independent of the letter
-   shortcuts, which are a sighted/mouse-first enhancement, not the only
-   path.
-3. **Performance, checked for the first time on this repo** (assignment 1
-   got this sensor, crit 4 hadn't yet): served `dist/` on a plain
-   `python3 -m http.server`, read real Navigation Timing --- `domComplete`
-   at ~15ms, JS+CSS bundle 6.24kB/2.39kB (gzip 2.54kB/1.14kB per the Vite
-   build output). Comfortably clears any realistic slow-connection bar by
-   size alone; no work needed here, same reasoning as assignment 1's
-   equivalent check.
-
-`pnpm check` reconfirmed green (23/23) at the top of the run before any of
-the above.
+`styles.css` had `touch-action: none` on `body` --- added so a drag across
+the pads wouldn't also trigger page scroll/zoom. `touch-action` isn't
+inherited the normal CSS way: its real effect on a touch is the
+*intersection* of the touched element's value with every ancestor's value,
+resolved by the browser's gesture recognizer, not something
+`getComputedStyle` on a descendant reveals (every child still read back
+`auto`, both before and after the bug --- this is why it evaded every prior
+`getComputedStyle`-based check). Because `body` wraps the whole page, that
+one declaration silently killed pinch-zoom everywhere --- the header link,
+the hint text, all of it --- not just over the instrument, and axe-core's
+`meta-viewport` rule never caught it since it only checks the viewport
+`<meta>` tag, not CSS `touch-action`. Confirmed via `getComputedStyle(el)
+.touchAction` on `body`/`header a` before and after (`none` → `auto`), plus
+a synthetic two-pointer drag across two pads afterwards proving the stage's
+own drag-without-page-scroll behaviour was unaffected. Fixed by moving the
+declaration from `body` to `.stage` alone. Documented in this repo's own
+`CLAUDE.md` and `PROCESS.md` (new "Sensor-lens ledger" section there
+summarising all seven bugs by which question found them).
 
 ## Next action
 
 1. Always re-check the brief first.
-2. Six real bugs found across thirteen runs (state-symmetry, logic-symmetry,
-   listener-placement, per-target multi-writer state, CSS custom-property
-   registration, app-vs-browser shortcut collision). Lenses now tried and
-   gone dry: button-agnostic pointerdown, blur/visibilitychange stuck-note
-   class, Shift+letter, DOM/ARIA accessibility-tree read, performance/
-   Navigation Timing. That's a lot of independently-dry sensors stacking up
-   --- worth noticing if the next run or two also comes back empty.
-3. Nothing left on the "not yet tried" list from prior hand-offs. If a
-   fourteenth run starts here, don't just re-run the same five dry lenses
-   again for a fourth+ confirm each --- either find a genuinely new question
-   (the six-bug track record suggests there may be one; past examples were
-   "does it agree with itself," "does it agree with the browser/OS," "does
-   it agree with the DOM/ARIA it claims," so a fourth axis is plausible but
-   hasn't been found yet) or accept the well may be closer to actually dry
-   than at any prior checkpoint and shift toward `PROCESS.md`/reflections
-   prep once the clock genuinely warrants it.
-4. The one legitimate lever left for *creative* deepening is real human
+2. Seven real bugs found across fourteen runs now, each via a distinct
+   question: state-symmetry, logic-symmetry, listener-placement, per-target
+   multi-writer state, CSS custom-property registration, app-vs-browser
+   keyboard-shortcut collision, and (this run) app-vs-browser touch/zoom-
+   gesture collision. Lenses tried and gone dry: button-agnostic
+   pointerdown, blur/visibilitychange cleanup, Shift+letter, DOM/ARIA
+   accessibility-tree read, Navigation Timing performance.
+3. The pattern across bugs 6 and 7 --- "does the page fight the browser's
+   own input/gesture handling, in a way a static audit tool (axe) doesn't
+   check" --- may not be exhausted yet. Worth asking once more before
+   assuming it's dry too: e.g. does anything else on the page override a
+   browser default a stranger would expect (right-click context menu,
+   double-tap-to-zoom on a specific element, drag-and-drop of an image/
+   text selection inside the stage, `user-select` on pad text)? Checked
+   right-click already (fine, prior run). Haven't specifically checked
+   text-selection/drag-of-content within `.pad`/`.pad__key`.
+4. `reflections/crit-4.md` correctly not yet written --- 48.5h is not yet
+   inside the 24h "finish" window, and a fresh bug this run means the story
+   still has road left to run before it's worth locking in.
+5. The one legitimate lever for *creative* deepening remains real human
    feedback from the pod at the actual crit, not anything to simulate ---
-   don't invent audio/interaction changes speculatively. This has been true
-   for several runs running; still true.
-5. `reflections/crit-4.md` correctly not yet written --- that's a
-   final-run finishing step per doctrine, and 59.5h is not yet inside the
-   24h "finish" window.
+   still true, still not the move to make solo.
 6. `gh auth`/`/ship` remain unavailable/unnecessary in this environment.
-   Nothing to push this run (no commits made).
+   This run's fix was pushed directly with `git push origin main`.
