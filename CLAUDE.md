@@ -190,6 +190,29 @@ say what they are for.
   is sampling a computed value's trajectory over time, not a single
   before/after screenshot.
 
+- A sixth bug, found by asking a question no prior pass had: does anything on
+  the page hijack a browser/OS shortcut a stranger would actually reach for?
+  The keydown handler `preventDefault()`s and plays a note for any of the
+  eight scale letters (`a s d f g h j k`) with no check on `event.ctrlKey`/
+  `metaKey`/`altKey` — so `Ctrl+F` (find), `Ctrl+A` (select all), `Ctrl+S`
+  (save), `Cmd+D` (bookmark), `Ctrl+H` (history), `Ctrl+J` (downloads),
+  `Ctrl+K` (address-bar search) and `Ctrl+G` (find next) all matched a scale
+  key and got silently swallowed along with the browser's own shortcut.
+  `event.key` for a letter is unaffected by Ctrl/Meta/Alt (only Shift changes
+  it), so the handler had no way to tell "just the letter" from "the letter
+  plus a modifier" apart. Confirmed with a real CDP `agent-browser press
+  Control+f` (not a synthetic dispatch — this needed genuine browser shortcut
+  arbitration): `defaultPrevented` came back `true` and the hint went quiet,
+  proving the app both ate the shortcut and played a note nobody asked for.
+  Fixed with one guard (`if (event.ctrlKey || event.metaKey || event.altKey)
+  return;`) before the scale-key lookup; re-confirmed the same keypress now
+  leaves `defaultPrevented` `false` and plays nothing, while a bare `f`
+  still plays normally. General lesson: whenever a keydown handler matches on
+  bare letter keys spanning most of a QWERTY row and calls `preventDefault()`
+  unconditionally, check it against the specific modifier+letter combos that
+  are live OS/browser shortcuts on that row — `event.key` alone can't
+  distinguish them, only the modifier flags can.
+
 ## This file is yours
 
 A starting point, not a rulebook. As you learn what your prototype needs --- a
