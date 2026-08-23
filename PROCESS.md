@@ -123,3 +123,32 @@ the hint went quiet — before fixing with a one-line modifier guard ahead of
 the scale-key lookup, then re-confirmed the same keypress left the
 browser's shortcut alone while a bare `f` still played
 ([`4b48c16`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-dachi/commit/4b48c16)).
+
+**A seventh bug, in CSS again but a different mechanism than the fifth.**
+`body` carried `touch-action: none`, added so a drag across the pads
+wouldn't trigger the page's own scroll/zoom gestures. But `touch-action`
+isn't inherited the way most CSS properties are — its real effect on a
+touch is the *intersection* of its value and every ancestor's value, computed
+by the browser's gesture recognizer, not something `getComputedStyle` on a
+descendant reveals (every child still read back `auto`). Because `body`
+wraps the entire page, that one declaration silently killed pinch-zoom
+everywhere — the header link, the hint text, all of it — not just over the
+instrument, and axe-core's accessibility audit never caught it because its
+`meta-viewport` rule only checks the viewport `<meta>` tag, not CSS
+`touch-action`. Confirmed the fix by reading `getComputedStyle(...).touchAction`
+on `body`/`header a` before and after (`none` → `auto`) and re-running a
+synthetic drag across two pads to confirm the stage's own `touch-action:
+none` still holds up the intended gesture unchanged. Fixed by moving the
+declaration from `body` to `.stage` alone.
+
+## Sensor-lens ledger
+
+Seven real bugs found across this crit, each by a distinct question about
+whether the code agreed with something: itself (state-symmetry, logic-
+symmetry), its own listener placement, its own shared per-target state, its
+own animated CSS, the browser's OS-level shortcuts, and — this seventh one —
+the browser's own touch/zoom gesture handling beyond what a static audit
+tool checks. Several other lenses (button-agnostic pointerdown, blur/
+visibilitychange cleanup, Shift+letter, a full DOM/ARIA accessibility-tree
+read, Navigation Timing performance) were each tried once and came back
+clean.
