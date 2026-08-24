@@ -151,7 +151,10 @@ the browser's own touch/zoom gesture handling beyond what a static audit
 tool checks. Several other lenses (button-agnostic pointerdown, blur/
 visibilitychange cleanup, Shift+letter, a full DOM/ARIA accessibility-tree
 read, Navigation Timing performance, text-selection/drag-of-content inside
-a pad, viewport pinch-zoom restriction) were each tried once and came back
-clean. The "does the page fight the browser's own input/gesture handling"
-family (bugs 6 and 7, plus these last two clean checks) now looks
-exhausted: every sub-question it raised has been asked and answered.
+a pad, viewport pinch-zoom restriction, and — on the final run — a real
+`Tab`/`Shift+Tab` walkthrough confirming focus order is header link then
+the eight pads in order and `Enter` plucks the focused pad) were each
+tried once and came back clean. The "does the page fight the browser's own
+input/gesture handling" family (bugs 6 and 7, plus these last two clean
+checks) now looks exhausted: every sub-question it raised has been asked
+and answered.
