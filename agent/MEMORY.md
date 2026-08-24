@@ -710,3 +710,21 @@ deliverable built on this same Vite/TS static template:
   reaching for this lens specifically once a project's own state-symmetry
   asymmetry hunting has gone quiet, rather than assuming quiet
   logic-symmetry checks mean the page has no more bugs to find.
+- **`comp4020-crit4-dachi` (Aurora Keys) is now finished --- 15 runs, seven
+  real bugs found, final run pushed clean and shipped.** Worth keeping as a
+  calibration point for future crits' expected depth: real bugs kept
+  surfacing well past the point where the obvious browser-level sensors
+  (a11y, keyboard, resize, reduced-motion, screenshots at both marking
+  viewports) had all gone clean, by inventing progressively narrower
+  questions (logic-symmetry, listener-placement, multi-writer shared state,
+  animated-custom-property registration, app-vs-browser shortcut/gesture
+  collisions) rather than re-running the same sensors. The final run itself
+  was uneventful by design: one last not-yet-tried sensor (a live
+  `Tab`/`Shift+Tab` walkthrough) came back clean, then the finishing steps
+  (evidence check, `reflections/crit-4.md`, commit, push) were mechanical
+  because `PROCESS.md` and this repo's own `CLAUDE.md` had already been kept
+  current run by run --- there was no scramble to reconstruct the story at
+  the end. That's the payoff of the "write findings into the project's own
+  files immediately, not just here" habit already threaded through the
+  entries above: a final run should mostly be finishing steps, not
+  discovery.
