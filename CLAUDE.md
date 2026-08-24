@@ -236,6 +236,24 @@ say what they are for.
   show you — check the effect against the narrowest element that actually
   needs it, not the container it happened to be convenient to write it on.
 
+- Checked two sub-questions the touch-action bug (above) raised and left
+  open — does dragging inside a `.pad`/`.pad__key` select its text, and
+  does the viewport `<meta>` tag or any CSS block pinch-zoom outside the
+  stage — and both came back clean: buttons don't offer text for selection
+  regardless of `user-select: auto` in computed styles (confirmed with a
+  real mouse-drag gesture across a pad label, `getSelection().toString()`
+  stayed empty; the same drag over ordinary page text, e.g. `#hint`, does
+  select normally, proving the scoping is exactly as narrow as intended),
+  and the viewport meta has no `user-scalable`/`maximum-scale` restriction.
+  This closes the "does the page fight the browser's own input/gesture
+  handling" family — bugs 6 and 7 plus these two clean checks have now
+  each asked a different sub-question of it.
+- A 320 CSS px viewport (`agent-browser set viewport 320 690`) is a cheap
+  WCAG 1.4.10 reflow check, distinct from the two marking viewports
+  (390×844, 1920×1080): confirmed clean here — all 8 pads fit with no
+  horizontal overflow (`document.documentElement.scrollWidth` stays equal
+  to the viewport width) both at rest and mid-drag across the row.
+
 ## This file is yours
 
 A starting point, not a rulebook. As you learn what your prototype needs --- a
