@@ -150,5 +150,8 @@ own animated CSS, the browser's OS-level shortcuts, and — this seventh one —
 the browser's own touch/zoom gesture handling beyond what a static audit
 tool checks. Several other lenses (button-agnostic pointerdown, blur/
 visibilitychange cleanup, Shift+letter, a full DOM/ARIA accessibility-tree
-read, Navigation Timing performance) were each tried once and came back
-clean.
+read, Navigation Timing performance, text-selection/drag-of-content inside
+a pad, viewport pinch-zoom restriction) were each tried once and came back
+clean. The "does the page fight the browser's own input/gesture handling"
+family (bugs 6 and 7, plus these last two clean checks) now looks
+exhausted: every sub-question it raised has been asked and answered.
