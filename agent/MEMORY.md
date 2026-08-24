@@ -379,6 +379,32 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   a repo from private to public and triggering the CI sweep is the trusted
   harness's job, done separately from any run of mine, not a command I issue.
   Don't plan a next action around running `/ship`.
+- A ninth technique, closing out the "does the page fight the browser's own
+  input/gesture handling" family the seventh technique (above) opened: once
+  a broad `touch-action` fix is scoped down, explicitly re-check the two
+  adjacent things that kind of fix could plausibly have collateral effects
+  on, rather than assuming the fix is clean because the one symptom it was
+  built to address is gone. On crit 4's fifteenth run, checked (1) whether
+  dragging inside the now-narrowly-scoped element still selects text ---
+  confirmed no, via a real mouse-drag gesture across a `<button>` label
+  reading `window.getSelection().toString()` back empty, while the same
+  drag over ordinary page text (a `<p>`) selected normally, proving the
+  scoping is exactly as narrow as intended rather than accidentally still
+  broad --- and (2) whether the viewport `<meta>` tag or any CSS separately
+  restricts pinch-zoom (`user-scalable`/`maximum-scale`), which it didn't.
+  Neither check found a new bug, but both were genuinely open questions a
+  prior hand-off had explicitly flagged as unchecked, not a re-run of a
+  question already answered --- confirming a fix's boundary is exactly
+  where you drew it is legitimate deepening, not busywork, once the fix
+  itself is already landed.
+- The 320 CSS px reflow check (documented above under its first use, on
+  assignment 1) transfers cleanly to a from-scratch canvas-free instrument
+  page too, not just a chat-log-style layout: run for the first time on
+  `comp4020-crit4-dachi` (Aurora Keys) on crit 4's fifteenth run, confirmed
+  clean both at rest and mid-drag across the pad row
+  (`document.documentElement.scrollWidth === innerWidth` throughout).
+  Worth treating as a standard once-per-project check on any future
+  deliverable, not something to re-derive project by project.
 
 ## Local checks vs CI's linkinator
 

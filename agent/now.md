@@ -1,62 +1,64 @@
-# Hand-off --- crit 4 (an instrument), fourteenth run, 48.5h to cutoff
+# Hand-off --- crit 4 (an instrument), fifteenth run, 41.5h to cutoff
 
 ## State
 
 `comp4020-crit4-dachi`: Aurora Keys. Brief re-fetched fresh --- unchanged
-again. Found and fixed a **seventh real bug**, pushed to `origin/main`
-(`f0f837f..4e9f492`). `pnpm check` green (23/23) after the fix. `git status`
-clean.
+again (still eighth+ consecutive unchanged fetch). No new bug this run ---
+a confirm-only pass, but a deliberate one: closed out the "does the page
+fight the browser's own input/gesture handling" family (bugs 6 and 7's
+family) by checking its two remaining open sub-questions, and ran one
+genuinely new sensor never used on this project before. Pushed to
+`origin/main` (`e810d94..fc6d6ac`, two commits). `pnpm check` green
+(23/23). `git status` clean.
 
-The thirteenth run's hand-off flagged five independently-dry lenses (state/
-logic-symmetry, listener-placement, Shift+letter, DOM/ARIA snapshot,
-performance) and asked for a genuinely new question rather than a fourth+
-re-confirm of any of those. Found one: **does the page unnecessarily disable
-a browser-native accessibility feature (pinch-zoom) beyond what the
-interaction actually needs?**
+Checked and confirmed clean (no bug):
+- Dragging inside `.pad`/`.pad__key` doesn't select text: a real mouse-drag
+  gesture across a pad label left `getSelection().toString()` empty
+  (buttons don't offer text for selection regardless of `user-select: auto`
+  in computed styles), while the same drag over ordinary page text (`#hint`)
+  selected normally --- proving the crit-4-fourteenth-run `touch-action`
+  scoping fix is exactly as narrow as intended, not accidentally also
+  blocking selection elsewhere.
+- The viewport `<meta>` tag has no `user-scalable`/`maximum-scale`
+  restriction, so pinch-zoom isn't disabled at that level either.
+- **New sensor, first run on this project**: a 320 CSS px viewport
+  (`agent-browser set viewport 320 690`), the WCAG 1.4.10 reflow check used
+  on assignment 1. Confirmed clean: all 8 pads fit with no horizontal
+  overflow (`document.documentElement.scrollWidth === innerWidth`), both at
+  rest and mid-drag across the pad row.
 
-`styles.css` had `touch-action: none` on `body` --- added so a drag across
-the pads wouldn't also trigger page scroll/zoom. `touch-action` isn't
-inherited the normal CSS way: its real effect on a touch is the
-*intersection* of the touched element's value with every ancestor's value,
-resolved by the browser's gesture recognizer, not something
-`getComputedStyle` on a descendant reveals (every child still read back
-`auto`, both before and after the bug --- this is why it evaded every prior
-`getComputedStyle`-based check). Because `body` wraps the whole page, that
-one declaration silently killed pinch-zoom everywhere --- the header link,
-the hint text, all of it --- not just over the instrument, and axe-core's
-`meta-viewport` rule never caught it since it only checks the viewport
-`<meta>` tag, not CSS `touch-action`. Confirmed via `getComputedStyle(el)
-.touchAction` on `body`/`header a` before and after (`none` → `auto`), plus
-a synthetic two-pointer drag across two pads afterwards proving the stage's
-own drag-without-page-scroll behaviour was unaffected. Fixed by moving the
-declaration from `body` to `.stage` alone. Documented in this repo's own
-`CLAUDE.md` and `PROCESS.md` (new "Sensor-lens ledger" section there
-summarising all seven bugs by which question found them).
+Both findings written into this repo's own `CLAUDE.md` and `PROCESS.md`'s
+sensor-lens ledger (not just here), per the project's own working pattern.
 
 ## Next action
 
 1. Always re-check the brief first.
-2. Seven real bugs found across fourteen runs now, each via a distinct
-   question: state-symmetry, logic-symmetry, listener-placement, per-target
-   multi-writer state, CSS custom-property registration, app-vs-browser
-   keyboard-shortcut collision, and (this run) app-vs-browser touch/zoom-
-   gesture collision. Lenses tried and gone dry: button-agnostic
-   pointerdown, blur/visibilitychange cleanup, Shift+letter, DOM/ARIA
-   accessibility-tree read, Navigation Timing performance.
-3. The pattern across bugs 6 and 7 --- "does the page fight the browser's
-   own input/gesture handling, in a way a static audit tool (axe) doesn't
-   check" --- may not be exhausted yet. Worth asking once more before
-   assuming it's dry too: e.g. does anything else on the page override a
-   browser default a stranger would expect (right-click context menu,
-   double-tap-to-zoom on a specific element, drag-and-drop of an image/
-   text selection inside the stage, `user-select` on pad text)? Checked
-   right-click already (fine, prior run). Haven't specifically checked
-   text-selection/drag-of-content within `.pad`/`.pad__key`.
-4. `reflections/crit-4.md` correctly not yet written --- 48.5h is not yet
-   inside the 24h "finish" window, and a fresh bug this run means the story
-   still has road left to run before it's worth locking in.
-5. The one legitimate lever for *creative* deepening remains real human
-   feedback from the pod at the actual crit, not anything to simulate ---
-   still true, still not the move to make solo.
+2. Seven real bugs found across fourteen runs (state-symmetry, logic-
+   symmetry, listener-placement, per-target multi-writer state, CSS
+   custom-property registration, app-vs-browser keyboard-shortcut
+   collision, app-vs-browser touch/zoom-gesture collision). The
+   browser-gesture-fighting family (bugs 6+7) is now explicitly closed ---
+   don't re-open it without a genuinely new sub-question, not a re-run of
+   any of: right-click, text-selection/drag, viewport zoom.
+3. Lenses now dry across two+ runs each: state/logic-symmetry,
+   listener-placement, Shift+letter, DOM/ARIA accessibility-tree read,
+   Navigation Timing performance, button-agnostic pointerdown, blur/
+   visibilitychange cleanup, browser-gesture-fighting (just closed).
+   A full fresh read of `main.ts` this run (keyboard chording, key-repeat
+   handling, modifier interaction at keyup, touch-tap vs click-pluck
+   double-fire risk) turned up nothing new either --- the code held up
+   under all of it.
+4. With most bug-hunting lenses now dry, the honest options for a
+   sixteenth run are: (a) invent one more genuinely fresh question rather
+   than re-running any of the above (a full keyboard-only Tab-order pass
+   hasn't specifically been done on Aurora Keys itself, only generically
+   noted as a technique elsewhere in global memory --- worth trying), or
+   (b) accept that code-level sensors are close to exhausted and that
+   further *creative* deepening needs real human ears at the actual crit,
+   per the sixth-run lesson already in global memory --- not something to
+   simulate solo.
+5. `reflections/crit-4.md` correctly not yet written --- 41.5h is not yet
+   inside the 24h "finish" window. Don't draft it just because sensors are
+   thinning; wait for either <24h or a materially settled story.
 6. `gh auth`/`/ship` remain unavailable/unnecessary in this environment.
-   This run's fix was pushed directly with `git push origin main`.
+   This run's changes were pushed directly with `git push origin main`.
